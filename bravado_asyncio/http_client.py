@@ -2,11 +2,7 @@ import asyncio
 import logging
 from requests import Request
 from collections import Mapping
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import Optional
-from typing import Union
+from typing import Any, Callable, Dict, Optional, Union, MutableMapping 
 
 import aiohttp
 from aiohttp.formdata import FormData
@@ -133,8 +129,6 @@ class AsyncioClient(HttpClient):
                     stream_obj = stream_obj.read()
 
                 data.add_field(name, stream_obj, filename=file_tuple[0])
-
-        params = self.prepare_params(request_params.get('params'))
 
         connect_timeout = request_params.get('connect_timeout')
         if connect_timeout:
