@@ -12,6 +12,7 @@ import aiohttp
 from aiohttp.formdata import FormData
 from bravado import http_future  # noqa
 from bravado.http_client import HttpClient
+from bravado.requests_client import Authenticator
 from bravado.http_future import HttpFuture
 from bravado_core.operation import Operation
 from bravado_core.response import IncomingResponse
@@ -68,6 +69,7 @@ class AsyncioClient(HttpClient):
         between AsyncioClient instances.
         """
         self.run_mode = run_mode
+        self.authenticator = authenticator
         if self.run_mode == RunMode.THREAD:
             self.loop = loop or get_thread_loop()
             self.run_coroutine_func = asyncio.run_coroutine_threadsafe  # type: Callable
@@ -145,13 +147,14 @@ class AsyncioClient(HttpClient):
         # aiohttp always adds a Content-Type header, and this breaks some servers that don't
         # expect it for non-POST/PUT requests: https://github.com/aio-libs/aiohttp/issues/457
         skip_auto_headers = ['Content-Type'] if request_params.get('method') not in ['POST', 'PUT'] else None
+        auth_request = self.authenticated_request(request_params)
 
         coroutine = self.client_session.request(
-            method=request_params.get('method') or 'GET',
-            url=request_params.get('url'),
-            params=params,
-            data=data,
-            headers=request_params.get('headers'),
+            method=auth_request.method,
+            url=auth_request.url,
+            params=auth_request.params,
+            data=auth_request.data,
+            headers=auth_request.headers,
             skip_auto_headers=skip_auto_headers,
             timeout=timeout,
         )
@@ -175,3 +178,12 @@ class AsyncioClient(HttpClient):
             entries = [(key, str(value))] if not is_list_like(value) else [(key, str(v)) for v in value]
             items.extend(entries)
         return MultiDict(items)
+
+    def authenticated_request(self, request_params: MutableMapping[str, Any]) -> Request:
+        return self.apply_authentication(Request(**request_params))
+
+    def apply_authentication(self, request: Request) -> Request:
+        if self.authenticator and self.authenticator.matches(request.url):
+            return self.authenticator.apply(request)
+
+        return request
