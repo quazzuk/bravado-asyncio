@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from requests import Request
 from collections import Mapping
 from typing import Any
 from typing import Callable
@@ -54,7 +55,12 @@ class AsyncioClient(HttpClient):
     async / await.
     """
 
-    def __init__(self, run_mode: RunMode=RunMode.THREAD, loop: Optional[asyncio.AbstractEventLoop]=None) -> None:
+    def __init__(
+        self, 
+        run_mode: RunMode=RunMode.THREAD, 
+        loop: Optional[asyncio.AbstractEventLoop]=None,
+        authenticator: Optional[Authenticator] = None,
+    ) -> None:
         """Instantiate a client using the given run_mode. If you do not pass in an event loop, then
         either a shared loop in a separate thread (THREAD mode) or the default asyncio
         event loop (FULL_ASYNCIO mode) will be used.
